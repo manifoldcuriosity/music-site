@@ -1,0 +1,412 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sean McFarland</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400&display=swap">
+  <style type="text/css">
+
+    /* ── FILM GRAIN OVERLAY ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.07;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='250'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.68' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='250' height='250' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size: 250px 250px;
+    }
+
+    /* ── BASE ── */
+    body {
+      background-color: #111111;
+      color: #aaaaaa;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 13px;
+      margin: 0;
+      padding: 28px 32px 0;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    a         { color: #888888; text-decoration: none; }
+    a:hover   { color: #dddddd; text-decoration: underline; }
+    a:visited { color: #666666; }
+
+    /* ── HEADER ── */
+    .site-header {
+      margin-bottom: 24px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid #222222;
+    }
+
+    .header-title {
+      font-family: "Playfair Display", Georgia, serif;
+      font-size: 36px;
+      font-weight: 400;
+      color: #dddddd;
+      letter-spacing: 4px;
+      margin: 0 0 6px 0;
+    }
+
+    .header-sub {
+      font-size: 11px;
+      color: #555555;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin: 0;
+    }
+
+    /* ── COLUMNS ── */
+    .columns {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 40px;
+      align-items: start;
+      flex: 1;
+    }
+
+    .col       { grid-column: auto / span 3; }
+    .col-sm    { grid-column: auto / span 2; }
+    .col-lg    { grid-column: auto / span 4; }
+
+    /* medium screens: 2-row layout, natural scroll */
+    @media (max-width: 1100px) {
+      body        { height: auto; overflow: visible; padding-bottom: 48px; }
+      .columns    { gap: 28px; }
+      .col-sm     { grid-column: auto / span 3; }
+      .col-lg     { grid-column: auto / span 9; }
+      .col        { grid-column: auto / span 6; }
+    }
+
+    /* mobile: single column, natural scroll */
+    @media (max-width: 720px) {
+      body        { height: auto; overflow: visible; padding-bottom: 48px; }
+      .columns    { gap: 20px; }
+      .col, .col-sm, .col-lg { grid-column: 1 / -1; }
+    }
+
+    /* ── SECTION LABELS ── */
+    .section-title {
+      font-family: "Courier New", Courier, monospace;
+      font-size: 10px;
+      font-weight: bold;
+      color: #555555;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      border-bottom: 1px solid #222222;
+      padding-bottom: 16px;
+      margin: 0 0 16px 0;
+    }
+
+    /* ── BIO PHOTO ── */
+    .bio-photo {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .bio-photo img {
+      width: 100%;
+      display: block;
+    }
+
+    /* gradient overlay: fades all four edges into the background */
+    .bio-photo::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(to right,  #111111 0%, transparent 18%, transparent 82%, #111111 100%),
+        linear-gradient(to bottom, #111111 0%, transparent 18%, transparent 82%, #111111 100%);
+      pointer-events: none;
+    }
+
+    .bio-text {
+      color: #888888;
+      line-height: 1.8;
+      white-space: pre-line;
+    }
+
+    /* ── MUSIC ── */
+    .release-project {
+      color: #888888;
+      font-weight: bold;
+      margin: 0 0 6px 0;
+    }
+
+    .release-entry {
+      margin-bottom: 4px;
+      padding-left: 12px;
+    }
+
+    .release-entry + .release-project {
+      margin-top: 20px;
+    }
+
+    .release-year {
+      color: #444444;
+      font-size: 11px;
+      margin-left: 8px;
+    }
+
+    /* ── SHOWS ── */
+    .show-entry {
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+
+    .show-date  { color: #cccccc; font-weight: bold; display: block; }
+    .show-venue { color: #aaaaaa; display: block; }
+    .show-loc   { color: #555555; font-size: 11px; display: block; }
+
+    .no-shows {
+      color: #444444;
+      font-style: italic;
+    }
+
+    /* ── CONNECT ── */
+    .connect-link {
+      display: block;
+      font-size: 11px;
+      color: #777777;
+      text-decoration: none;
+      border: 1px solid #222222;
+      padding: 4px 10px;
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      width: fit-content;
+    }
+    .connect-link:hover {
+      color: #dddddd;
+      border-color: #555555;
+    }
+
+    /* ── FOOTER ── */
+    .site-footer {
+      margin-top: 40px;
+      padding: 16px 0 28px;
+      border-top: 1px solid #1e1e1e;
+      font-size: 11px;
+      color: #333333;
+      letter-spacing: 2px;
+    }
+
+  </style>
+</head>
+<body>
+
+
+<!-- ================================================================ -->
+<!-- HEADER                                                            -->
+<!-- ================================================================ -->
+<div class="site-header">
+  <p class="header-title">SEAN McFARLAND</p>
+</div>
+
+
+<!-- ================================================================ -->
+<!-- FOUR COLUMNS: Photo | Bio | Music | Shows+Connect               -->
+<!-- ================================================================ -->
+<div class="columns">
+
+  <!-- ============================================================== -->
+  <!-- COLUMN 1: PHOTO                                                 -->
+  <!-- ============================================================== -->
+  <div class="col-sm bio-photo" id="photo">
+
+    <p class="section-title">&nbsp;</p>
+
+    <!-- TO EDIT: swap photo.jpg for your actual filename if different -->
+    <img src="photo.jpg" alt="Sean McFarland">
+
+  </div>
+
+
+  <!-- ============================================================== -->
+  <!-- COLUMN 2: BIO                                                   -->
+  <!-- ============================================================== -->
+  <div class="col-lg" id="bio">
+
+    <p class="section-title">About</p>
+
+    <p class="bio-text">Sean McFarland (b. 1991) is an American musician and composer based in Baltimore, Maryland. His work spans experimental guitar music, ambient composition, and frequent collaboration with other artists. He performs solo, as a member of Euclid C Finder!, and in Chanp.
+	
+McFarland's solo practice moves between three modes: composition, guitar performance, and electronic music. His compositional work centers on music made for the medium of recording — layered voices, densely overdubbed instruments, and arrangements that exist specifically as studio works. His 2021 release 1006 and Resonance features solo electric guitar performances including an interpretation of Bach's Violin Partita No. 3 in E major.
+
+McFarland is a founding member of The Undercroft, a volunteer-run, sober, all-ages venue in Remington, and a member of the collective at 2640 Space. He studied composition at the Peabody Institute of the Johns Hopkins University, where he received the Philip Glass Endowed Scholarship and the Gustav Klemm Award in Composition.</p>
+
+  </div>
+
+
+  <!-- ============================================================== -->
+  <!-- COLUMN 3: MUSIC                                                 -->
+  <!-- ============================================================== -->
+  <div class="col" id="music">
+
+    <p class="section-title">Music</p>
+
+    <!-- ============================================================
+         TO ADD A RELEASE: copy one .release-entry block and fill in.
+         TO ADD A PROJECT HEADING: copy a .release-project line.
+         ============================================================ -->
+
+    <p class="release-project">Sean McFarland</p>
+
+    <div class="release-entry">
+      <a href="https://seanmcfarland.bandcamp.com/album/1006-and-resonance" target="_blank">1006 and Resonance</a>
+      <span class="release-year">2021</span>
+    </div>
+
+    <div class="release-entry">
+      <a href="https://seanmcfarland.bandcamp.com/album/aoat-12-tet-ep" target="_blank">Aoat(12+tet) EP</a>
+      <span class="release-year">2020</span>
+    </div>
+
+    <p class="release-project">Chanp</p>
+
+    <div class="release-entry">
+      <a href="https://chanp.bandcamp.com/album/proof-of-concept-deno" target="_blank">Proof of Concept (deno)</a>
+      <span class="release-year">2026</span>
+    </div>
+
+    <p class="release-project">Euclid C Finder!</p>
+
+    <div class="release-entry">
+      <a href="#" target="_blank">The Mirror My Weapon I Love You</a>
+      <span class="release-year">2023</span>
+    </div>
+
+    <div class="release-entry">
+      <a href="https://heathenhandrecords.bandcamp.com/album/recollections-2018-2020" target="_blank">Recollections: 2018-2020</a>
+      <span class="release-year">2022</span>
+    </div>
+
+    <!-- ============================================================
+         PREVIOUS PROJECTS — same format as Music above.
+         Use <a href="..."> if there's a Bandcamp link, plain <span> if not.
+         ============================================================ -->
+
+    <p class="section-title" style="margin-top:28px;">Previous Projects</p>
+
+    <p class="release-project"><a href="https://www.youtube.com/watch?v=P3Gl7gBYEOw" target="_blank">Great Silent Whispering Years</a> <span class="release-year">2018</span></p>
+
+    <p class="release-project"><a href="https://junepastel.bandcamp.com/" target="_blank">June Pastel</a> <span class="release-year">2018–2020</span></p>
+	
+	<p class="release-project"><a href="https://www.youtube.com/watch?v=sL-Llvm14x4" target="_blank">Double Happiness</a> <span class="release-year">2017</span></p>
+	
+	<p class="release-project"><a href="https://www.youtube.com/watch?v=bM4aUtaaNXU" target="_blank">Intubate</a> <span class="release-year">2016</span></p>
+
+    <p class="release-project"><a href="https://neckfirst.bandcamp.com/" target="_blank">Neck First</a> <span class="release-year">2012–2014</span></p>
+
+  </div>
+
+
+  <!-- ============================================================== -->
+  <!-- COLUMN 4: SHOWS + CONNECT                                       -->
+  <!-- ============================================================== -->
+  <div class="col" id="shows">
+
+    <p class="section-title">Shows</p>
+
+    <!-- ============================================================
+         TO ADD A SHOW: copy one .show-entry div and fill in.
+         The hidden <span> holds the ISO date (YYYY-MM-DD) used
+         to auto-hide past shows — keep it in sync with the display date.
+         TO REMOVE: delete the entire .show-entry div.
+         ============================================================ -->
+
+    <div class="show-entry" data-show>
+      <span class="iso-date" style="display:none">2026-04-4</span>
+      <span class="show-date">APR 4 2026</span>
+      <span class="show-venue">euclid c finder @ gold sounds</span>
+      <span class="show-loc">brooklyn, ny</span>
+    </div>
+
+    <div class="show-entry" data-show>
+      <span class="iso-date" style="display:none">2026-04-11</span>
+      <span class="show-date">APR 11 2026</span>
+      <span class="show-venue">chanp @ holy frijoles</span>
+      <span class="show-loc">baltimore, md</span>
+    </div>
+	
+    <div class="show-entry" data-show>
+      <span class="iso-date" style="display:none">2026-04-19</span>
+      <span class="show-date">APR 19 2026</span>
+      <span class="show-venue">solo @ faddensonnen</span>
+      <span class="show-loc">baltimore, md</span>
+    </div>
+	
+	<div class="show-entry" data-show>
+      <span class="iso-date" style="display:none">2026-06-07</span>
+      <span class="show-date">JUN 7 2026</span>
+      <span class="show-venue">considering matthew sheppard @ emmanuel episcopal</span>
+      <span class="show-loc">baltimore, md</span>
+    </div>
+	
+	
+
+    <!-- Add more shows above this line -->
+
+    <p id="no-shows-msg" class="no-shows" style="display:none">
+      No upcoming shows at this time.
+    </p>
+
+    <p class="section-title" style="margin-top:32px;">Connect</p>
+
+    <!-- TO EDIT: replace href="#" with your actual URLs -->
+    <a class="connect-link" href="https://seanmcfarland.bandcamp.com" target="_blank">Bandcamp</a>
+    <a class="connect-link" href="https://www.instagram.com/_seanmcfarland/" target="_blank">Instagram</a>
+    <a class="connect-link" href="mailto:sean@theundercroft.org">Email</a>
+
+    <!-- Add more links by copying a .connect-link line -->
+
+  </div>
+
+</div><!-- /columns -->
+
+
+<!-- ================================================================ -->
+<!-- FOOTER                                                            -->
+<!-- ================================================================ -->
+<div class="site-footer">
+  &copy; 2026 Sean McFarland &nbsp;|&nbsp; seanmcfarland.music
+</div>
+
+
+<script type="text/javascript">
+  // Hides .show-entry divs whose date has already passed.
+  // Reads the hidden .iso-date span inside each entry.
+  window.onload = function() {
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    var entries = document.querySelectorAll('[data-show]');
+    var visibleCount = 0;
+
+    for (var i = 0; i < entries.length; i++) {
+      var dateSpan = entries[i].querySelector('.iso-date');
+      if (dateSpan) {
+        var parts = dateSpan.innerHTML.split('-');
+        var showDate = new Date(parts[0], parts[1] - 1, parts[2]);
+        if (showDate < today) {
+          entries[i].style.display = 'none';
+        } else {
+          visibleCount++;
+        }
+      }
+    }
+
+    if (visibleCount === 0) {
+      var msg = document.getElementById('no-shows-msg');
+      if (msg) msg.style.display = 'block';
+    }
+  };
+</script>
+
+</body>
+</html>
