@@ -74,6 +74,19 @@
     .col-sm    { grid-column: auto / span 2; }
     .col-lg    { grid-column: auto / span 4; }
 
+    /* ultrawide: scale up text and spacing */
+    @media (min-width: 1920px) {
+      body          { font-size: 15px; padding: 36px 48px 0; }
+      .header-title { font-size: 48px; }
+      .columns      { gap: 56px; }
+    }
+
+    @media (min-width: 2560px) {
+      body          { font-size: 17px; padding: 44px 64px 0; }
+      .header-title { font-size: 58px; }
+      .columns      { gap: 72px; }
+    }
+
     /* medium screens (includes iPad Pro landscape): 2-row layout, natural scroll */
     @media (max-width: 1400px) {
       body        { height: auto; overflow: visible; padding-bottom: 48px; }
