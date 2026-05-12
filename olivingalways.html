@@ -343,9 +343,8 @@
   <script>
     const API_ENDPOINT = 'https://44ga5gt46eibubi6fy2boem54m0tthno.lambda-url.us-east-2.on.aws/';
     const RECAPTCHA_SITE_KEY = '6Ldc2OYsAAAAAJ-Fc-7yZkHFPwNhmsUR3hD5m9BK';
+    const CHUNK_SIZE = 4 * 1024 * 1024; // 4 MB per chunk
 
-    let mediaRecorder = null;
-    let audioChunks = [];
     let startTime = null;
     let timerInterval = null;
     let analyser = null;
@@ -356,6 +355,11 @@
     let recaptchaWidgetId = null;
     let pendingRecaptchaToken = null;
     let waitingToRecord = false;
+
+    let pcmChunks = [];
+    let processor = null;
+    let currentStream = null;
+    let currentSampleRate = 48000;
 
     const NUM_BARS = 40;
     const waveformEl = document.getElementById('waveform');
@@ -374,6 +378,8 @@
     }
     const bars = waveformEl.querySelectorAll('.bar');
 
+    // ── reCAPTCHA ──
+
     function onRecaptchaLoad() {
       recaptchaWidgetId = grecaptcha.render('recaptcha-container', {
         sitekey: RECAPTCHA_SITE_KEY,
@@ -390,6 +396,8 @@
         startRecording();
       }
     }
+
+    // ── UI helpers ──
 
     function setStatus(msg, type = '') {
       statusEl.textContent = msg;
@@ -414,17 +422,49 @@
       animFrame = requestAnimationFrame(drawWaveform);
     }
 
-    function blobToBase64(blob) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64 = reader.result.split(',')[1];
-          resolve(base64);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
+    // ── WAV encoding ──
+
+    function encodeWAV(chunks, sampleRate) {
+      const totalSamples = chunks.reduce((sum, c) => sum + c.length, 0);
+      const pcm = new Float32Array(totalSamples);
+      let off = 0;
+      for (const c of chunks) { pcm.set(c, off); off += c.length; }
+
+      const buf = new ArrayBuffer(44 + totalSamples * 2);
+      const v = new DataView(buf);
+      const str = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+
+      str(0,  'RIFF');  v.setUint32(4,  36 + totalSamples * 2, true);
+      str(8,  'WAVE');  str(12, 'fmt ');
+      v.setUint32(16, 16, true);             // fmt chunk size
+      v.setUint16(20, 1,  true);             // PCM
+      v.setUint16(22, 1,  true);             // mono
+      v.setUint32(24, sampleRate,     true);
+      v.setUint32(28, sampleRate * 2, true); // byte rate
+      v.setUint16(32, 2,  true);             // block align
+      v.setUint16(34, 16, true);             // 16-bit
+      str(36, 'data');  v.setUint32(40, totalSamples * 2, true);
+
+      let o = 44;
+      for (let i = 0; i < totalSamples; i++) {
+        const s = Math.max(-1, Math.min(1, pcm[i]));
+        v.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        o += 2;
+      }
+      return buf;
     }
+
+    function bufToBase64(buffer) {
+      const bytes = new Uint8Array(buffer);
+      const BATCH = 8192;
+      let binary = '';
+      for (let i = 0; i < bytes.length; i += BATCH) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + BATCH));
+      }
+      return btoa(binary);
+    }
+
+    // ── Recording ──
 
     function toggleRecording() {
       if (isRecording) {
@@ -448,47 +488,30 @@
           }
         });
 
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
+        currentSampleRate = audioCtx.sampleRate;
         const source = audioCtx.createMediaStreamSource(stream);
+
         analyser = audioCtx.createAnalyser();
         analyser.fftSize = 256;
         source.connect(analyser);
         dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-        const mimeType = [
-          'audio/webm;codecs=opus',
-          'audio/webm',
-          'audio/ogg;codecs=opus',
-          'audio/mp4',
-        ].find(t => MediaRecorder.isTypeSupported(t)) || '';
-
-        mediaRecorder = new MediaRecorder(stream, {
-          ...(mimeType && { mimeType }),
-          audioBitsPerSecond: 320000,
-        });
-        audioChunks = [];
-
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) audioChunks.push(e.data);
+        pcmChunks = [];
+        processor = audioCtx.createScriptProcessor(4096, 1, 1);
+        const silent = audioCtx.createGain();
+        silent.gain.value = 0;
+        source.connect(processor);
+        processor.connect(silent);
+        silent.connect(audioCtx.destination);
+        processor.onaudioprocess = (e) => {
+          pcmChunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
         };
 
-        mediaRecorder.onstop = async () => {
-          stream.getTracks().forEach(t => t.stop());
-          cancelAnimationFrame(animFrame);
-          if (audioCtx) audioCtx.close();
-          bars.forEach(b => b.style.height = '6px');
-          waveformEl.classList.remove('active');
-
-          const ext = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('ogg') ? 'ogg' : 'webm';
-          const blob = new Blob(audioChunks, { type: mimeType || 'audio/webm' });
-          await uploadAudio(blob, ext);
-        };
-
-        mediaRecorder.start(250);
+        currentStream = stream;
         isRecording = true;
         startTime = Date.now();
         timerInterval = setInterval(updateTimer, 500);
-
         ringEl.classList.add('recording');
         ringLabel.textContent = 'Recording…';
         ringSubLabel.textContent = 'Press again to stop';
@@ -508,42 +531,82 @@
     }
 
     function stopRecording() {
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-      }
       isRecording = false;
       clearInterval(timerInterval);
       ringEl.classList.remove('recording');
       ringLabel.textContent = 'Tap to record';
       ringSubLabel.textContent = '';
       timerEl.classList.remove('active');
+
+      if (processor) { processor.disconnect(); processor.onaudioprocess = null; }
+      if (currentStream) currentStream.getTracks().forEach(t => t.stop());
+      cancelAnimationFrame(animFrame);
+      if (audioCtx) audioCtx.close();
+      bars.forEach(b => b.style.height = '6px');
+      waveformEl.classList.remove('active');
+
+      uploadAudio(encodeWAV(pcmChunks, currentSampleRate));
     }
 
-    async function uploadAudio(blob, ext = 'webm') {
+    // ── Upload ──
+
+    async function uploadAudio(wavBuffer) {
       ringEl.classList.add('uploading');
       ringLabel.textContent = 'Uploading…';
-      setStatus('Sending to Dropbox…');
 
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const filename = `recording-${timestamp}.${ext}`;
+      const filename = `recording-${timestamp}.wav`;
+      const totalBytes = wavBuffer.byteLength;
+      const totalChunks = Math.ceil(totalBytes / CHUNK_SIZE);
 
       try {
-        const audioData = await blobToBase64(blob);
+        if (totalChunks === 1) {
+          setStatus('Uploading…');
+          const res = await fetch(API_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              audioData: bufToBase64(wavBuffer),
+              filename,
+              recaptchaToken: pendingRecaptchaToken,
+            }),
+          });
+          if (!res.ok) throw new Error(`Server error ${res.status}: ${await res.text()}`);
+          await res.json();
 
-        const res = await fetch(API_ENDPOINT, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filename, audioData, recaptchaToken: pendingRecaptchaToken }),
-        });
+        } else {
+          let sessionId = null;
+          let uploadedBytes = 0;
 
-        if (!res.ok) {
-          const errBody = await res.text();
-          throw new Error(`Server error ${res.status}: ${errBody}`);
+          for (let i = 0; i < totalChunks; i++) {
+            const isFirst = i === 0;
+            const isLast  = i === totalChunks - 1;
+            const chunk = wavBuffer.slice(i * CHUNK_SIZE, Math.min((i + 1) * CHUNK_SIZE, totalBytes));
+            const audioData = bufToBase64(chunk);
+
+            setStatus(`Uploading… ${i + 1} / ${totalChunks}`);
+
+            const body = isFirst
+              ? { action: 'start',  audioData, recaptchaToken: pendingRecaptchaToken }
+              : isLast
+              ? { action: 'finish', audioData, sessionId, offset: uploadedBytes, filename }
+              : { action: 'append', audioData, sessionId, offset: uploadedBytes };
+
+            const res = await fetch(API_ENDPOINT, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+            });
+            if (!res.ok) throw new Error(`Chunk ${i + 1} failed: ${await res.text()}`);
+
+            const result = await res.json();
+            if (isFirst) sessionId = result.sessionId;
+            uploadedBytes += chunk.byteLength;
+          }
         }
 
-        const result = await res.json();
         setStatus('Thank you so much for your contribution!', 'success');
-        addHistoryItem(filename, blob.size);
+        addHistoryItem(filename, totalBytes);
 
       } catch (err) {
         console.error(err);
@@ -560,11 +623,11 @@
 
     function addHistoryItem(name, sizeBytes) {
       historySection.style.display = 'block';
-      const kb = (sizeBytes / 1024).toFixed(1);
+      const mb = (sizeBytes / (1024 * 1024)).toFixed(1);
       const now = new Date().toLocaleTimeString();
       const item = document.createElement('div');
       item.className = 'history-item';
-      item.innerHTML = `<span class="name">${name}</span><span class="meta">${kb} KB · ${now}</span>`;
+      item.innerHTML = `<span class="name">${name}</span><span class="meta">${mb} MB · ${now}</span>`;
       historyList.prepend(item);
     }
 
