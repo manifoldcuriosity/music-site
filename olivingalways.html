@@ -320,7 +320,7 @@
         source.connect(analyser);
         dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 320000 });
         audioChunks = [];
 
         mediaRecorder.ondataavailable = (e) => {
