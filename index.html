@@ -26,9 +26,7 @@
       font-family: "Courier New", Courier, monospace;
       font-size: 13px;
       margin: 0;
-      padding: 28px 32px 0;
-      height: 100vh;
-      overflow: hidden;
+      padding: 28px 32px 48px;
       display: flex;
       flex-direction: column;
     }
@@ -89,7 +87,7 @@
 
     /* medium screens (includes iPad Pro landscape): 2-row layout, natural scroll */
     @media (max-width: 1400px) {
-      body        { height: auto; overflow: visible; padding-bottom: 48px; }
+      body        { padding-bottom: 48px; }
       .columns    { gap: 28px; }
       .col-sm     { grid-column: auto / span 3; }
       .col-lg     { grid-column: auto / span 9; }
@@ -98,7 +96,7 @@
 
     /* mobile: single column, natural scroll */
     @media (max-width: 720px) {
-      body        { height: auto; overflow: visible; padding-bottom: 48px; }
+      body        { padding-bottom: 48px; }
       .columns    { gap: 20px; }
       .col, .col-sm, .col-lg { grid-column: 1 / -1; }
     }
